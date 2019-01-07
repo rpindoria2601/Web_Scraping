@@ -1,0 +1,184 @@
+# Read data from FCA Website $\downarrow$
+
+$\textbf{Test Article:}$
+
+- 1) URL Link = https://www.fca.org.uk/news/press-releases/fca-announces-proposals-fundamentally-reform-way-banks-charge-overdrafts-and-extends-protections
+- 2) Clean data - read article and remove html tags
+- 3) Tokenize the words - split sentences into individual words
+- 4) Exclude stopwords e.g. single/two letter words that have no statistical meaning
+- 5) Word count (visual representation in bar chart)
+
+df1 = requests.get('https://www.fca.org.uk/news/press-releases/santander-uk-plc-fined-serious-failings-its-probate-and-bereavement-process')
+
+# We can then print the data as below
+
+data = df1.text
+#print(data)
+
+# When we have loaded the data into the "data" variable, we can use the beautiful soup package
+# to remove any HTML tags which form part of the text.
+# This leaves a cleaner dataset in the "text" variable
+
+soup = BeautifulSoup(data,'lxml')
+article = soup.findAll("div", {"class":"field-type-text-long"})[0]
+tags = article.findAll('p')
+text = "".join(("%s"%tag.text for tag in tags))
+#print(text)
+
+# We can then use the NLTK library to "tokenise" the data. Tokenise is a fancy way of saying, split the words individually.
+
+from nltk.tokenize import RegexpTokenizer
+
+# Create tokenizer
+tokenizer = RegexpTokenizer('\w+')
+
+# Create tokens
+tokens = tokenizer.tokenize(text)
+#print(tokens)
+
+# We then initialize new list
+words = []
+
+
+# and loop through tokens whilst making them lower case ready for analysis
+for word in tokens:
+    words.append(word.lower())
+    
+    # NLTK has an additional package which removes any "stopwords" being words which do not provide context to the remaining text
+
+sw = stopwords.words('english')
+
+# We can also add our own stopwords and append these to the list of stopwords to be disregarded from the data
+
+newStopWords = ['var','js','1','0','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+sw.extend(newStopWords)
+
+# We then create an empty list
+
+words_f = []
+
+# And add all words to the empty list that are in the data but are not stopwords
+
+for word in words:
+    if word not in sw:
+        words_f.append(word)
+        
+# We can further this analysis using the collections library to count the number of times each word appears
+
+import collections
+counter=collections.Counter(words_f)
+#print(counter)
+
+# Convert the dictionary to a dataframe and plot this using the pandas plotting function
+
+counter_dict = dict(counter)
+type(counter_dict)
+df = pd.DataFrame(list(counter_dict.values()),counter_dict.keys())
+df.sort_values(by=[0], ascending=False)
+
+import matplotlib.pyplot as plt
+
+# Plotting code below
+
+df_top_25 = df.nlargest(25,0)
+df_top_25.plot(kind = 'bar')
+plt.title('A bar graph showing the top 25 words in the FCA Article')
+plt.ylabel('Count of words', fontsize=10)
+plt.xlabel('Words in text', fontsize=10)
+
+
+# Further Analysis from FCA Website $\downarrow$
+
+$\textbf{Word Cloud:}$
+
+- 1) URL Link = https://www.fca.org.uk/news/press-releases/fca-announces-proposals-fundamentally-reform-way-banks-charge-overdrafts-and-extends-protections
+
+!pip install wordcloud
+from os import path
+from PIL import Image
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
+
+from wordcloud import WordCloud, STOPWORDS
+
+# read the mask image
+# taken from
+# http://longleafreview.com/masthead/question-mark-scribble-animation-doodle-cartoon-4k_bdi1p4a_e_thumbnail-full01/
+#qm_mask = np.array(Image.open(path.join(d, "question_mark.png")))
+
+stopwords = set(STOPWORDS)
+stopwords.add("said")
+#stopwords
+
+#chosen the top 100 words - avoid overcrowding of word cloud
+wc = WordCloud(background_color="white", max_words=100, stopwords=stopwords, contour_width=3, contour_color='steelblue')
+
+# generate word cloud
+wc.generate(text)
+
+plt.figure()
+plt.imshow(wc, interpolation="bilinear")
+plt.axis("off")
+plt.show()
+
+
+# Sentiment Analysis from FCA Website $\downarrow$
+
+$\textbf{Sentiment Score:}$
+
+- 1) URL Link = https://www.fca.org.uk/news/press-releases/fca-announces-proposals-fundamentally-reform-way-banks-charge-overdrafts-and-extends-protections
+
+!pip install vaderSentiment
+
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+analyser = SentimentIntensityAnalyzer()
+
+def print_sentiment_scores(sentence):
+    snt = analyser.polarity_scores(sentence)
+    print("{:-<40} {}".format(sentence, str(snt)))
+    
+print_sentiment_scores("<add text here>")    
+
+
+
+
+#####TEST#####
+#Multiple pings
+
+!pip install bs4
+!pip install requests
+from bs4 import BeautifulSoup
+import requests
+import nltk
+import time 
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+nltk.download("stopwords")
+nltk.download('punkt')
+
+# We then create a dataframe containing all the text and HTML tags using the requests library and get function.
+# This sends a "request" to the specified site (CNN Lite) for their data.
+
+df = requests.get('https://www.fca.org.uk/news/search-results?start=1&sort_by=dmetaZ')
+
+def get_article_text(href):
+    dftext = requests.get(href)
+   # print(dftext.text)
+    soup = BeautifulSoup(dftext.text,'lxml')
+    article = soup.findAll("div", {"class":"field-type-text-long"})
+    if len(article) == 0:
+        return ""
+    tags = article[0].findAll('p')
+    text = "".join(("%s"%tag.text for tag in tags))
+    return text
+    
+soup1 = BeautifulSoup(df.text,'lxml')
+articles = soup1.findAll("a", {"class":"search-item__clickthrough"})
+for article in articles :
+    print(article["href"])
+    print(get_article_text(article["href"]))
+    time.sleep(10)    
+
+
